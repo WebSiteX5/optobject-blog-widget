@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<App uuid="33ce82c8-954f-4103-91dc-33de36cbf77">
+   <Name>Blog Widget</Name>
+   <Author>Incomedia</Author>
+   <Version>5</Version>
+   <Category>Widgets</Category>
+   <Description l10n-id="description">Show the latest posts published in the blog created with WebSite X5.</Description>
+   <ShowPreview>True</ShowPreview>
+   <Resources>
+      <Resource src="style.css" action="process" autolink="true" shared="false" />
+   </Resources>
+   <Parameters>
+      <Tab>
+         <Label>Graphics</Label>
+         <Fields>
+            <Field id="posts_number" type="number">
+               <DefaultValue>3</DefaultValue>
+               <MinValue>1</MinValue>
+               <Label l10n-id="posts_number">Number of posts:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="height" type="number">
+               <DefaultValue>350</DefaultValue>
+               <Label l10n-id="height">Height:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="sep1" type="separator">
+               <Label l10n-id="title_separator">Title style</Label>
+            </Field>
+            <Field id="title_alignment" type="dropdown">
+               <Options>
+                  <Option l10n-id="text_alignment_left" value="left">Left</Option>
+                  <Option l10n-id="text_alignment_center" value="center">Center</Option>
+                  <Option l10n-id="text_alignment_right" value="right">Right</Option>
+               </Options>
+               <DefaultValue>left</DefaultValue>
+               <Label l10n-id="text_alignment">Alignment:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="title_font" type="font">
+               <Label l10n-id="text_font">Font:</Label>
+               <DefaultFontSize>12</DefaultFontSize>
+               <DefaultBold>true</DefaultBold>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="title_color" type="color">
+               <Label l10n-id="text_color">Color:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="title_underline" type="checkbox">
+               <Label l10n-id="text_underline">Underline:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="sep2" type="separator">
+               <Label l10n-id="text_separator">Content style</Label>
+            </Field>
+            <Field id="text_alignment" type="dropdown">
+               <Options>
+                  <Option l10n-id="text_alignment_left" value="left">Left</Option>
+                  <Option l10n-id="text_alignment_center" value="center">Center</Option>
+                  <Option l10n-id="text_alignment_right" value="right">Right</Option>
+               </Options>
+               <DefaultValue>left</DefaultValue>
+               <Label l10n-id="text_alignment">Alignment:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="text_font" type="font">
+               <Label l10n-id="text_font">Font:</Label>
+               <DefaultFontSize>10</DefaultFontSize>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+            <Field id="text_color" type="color">
+               <Label l10n-id="text_color">Color:</Label>
+               <UpdatesPreview>true</UpdatesPreview>
+            </Field>
+         </Fields>
+         <ShowPreview>True</ShowPreview>
+      </Tab>
+   </Parameters>
+   <PageExtension>php</PageExtension>
+   <Hooks><![CDATA[
+      function GetHeaderContents(type, currentContent) {
+         // When offline, include the JS blog library
+         if (wsx5.mode == 'preview' && type == 'js') {
+            return "<script type=\"text/javascript\" src=\"blog/x5blog.js\"></script>";
+         }
+         return "";
+      }
+      function GetHeight() {
+         return parameters.height.value;
+      }
+   ]]></Hooks>
+   <Output><![CDATA[
+         <?wsx5
+         if (wsx5.mode == "preview") {
+            // -------------
+            // Local preview
+            // -------------
+            document.write('<div class="post_container"></div>\n');
+            document.write("<script type=\"text/javascript\">\n");
+            document.write("x5engine.boot.push(function () {\n");
+            document.write("\tvar i = 0, posts = [], html = '';\n");
+            document.write("\tfor (var postId in x5engine.settings.imBlog.posts) {\n");
+            document.write("\t\tif (x5engine.settings.imBlog.posts[postId].utc_time < new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000)))");
+            document.write("\t\t\tposts.push(x5engine.settings.imBlog.posts[postId]);\n");
+            document.write("\t}\n");
+            document.write("\twhile (i < " + parameters.posts_number.value + " && i < posts.length) {\n"); // Start the loop
+            document.write("\t\thtml += '<div class=\"post\">';\n"); // Open post
+            document.write("\t\thtml += '<a href=\"blog/index.html?id=' + posts[i]['id'] + '\" class=\"post_title\">' + posts[i]['title'] + '</a>';\n"); // Post title
+            document.write("\t\thtml += '<div class=\"post_body\">' + posts[i]['summary'] + '</div>';\n"); // Post body
+            document.write("\t\thtml += '<div class=\"post_data\">" + l10n.get("published_by", "Published by") + " ' + posts[i]['author'] + ' - ' + posts[i]['timestamp'] + '</div>';\n"); // Post data
+            document.write("\t\thtml += '</div>';\n"); // Close post
+            document.write("\t\ti++;\n");
+            document.write("\t}\n"); // Close the loop
+            // Write the html in the container
+            document.write("\t$('#" + currentObject.id + " .post_container').html(html);\n");
+            document.write("});");
+            document.write("</script>");
+         } else {
+            // --------------
+            // Online content
+            // --------------
+            document.write('<div class="post_container">\n');
+            document.write("<?php\n");
+            document.write("\trequire_once('res/x5engine.php');\n");
+            document.write("\t$blog = new imBlog();\n");
+            document.write("\t$i = 0;\n");
+            document.write("\t$posts = array_values($blog->getPosts());\n");
+            document.write("\twhile ($i < " + parameters.posts_number.value + " && $i < count($posts)) {\n"); // Start the loop
+            document.write("\t\techo '<div class=\"post\">';\n"); // Open post
+            document.write("\t\techo '<a href=\"blog/index.php?id=' . $posts[$i]['id'] . '\" class=\"post_title\">' . $posts[$i]['title'] . '</a>';\n"); // Post title
+            document.write("\t\techo '<div class=\"post_body\">' . $posts[$i]['summary'] . '</div>';\n"); // Post body
+            document.write("\t\techo '<div class=\"post_data\">" + l10n.get("published_by", "Published by") + " ' . $posts[$i]['author'] . ' - ' . $posts[$i]['timestamp'] . '</div>';\n"); // Post data
+            document.write("\t\techo '</div>';\n"); // Close post
+            document.write("\t\t$i++;\n");
+            document.write("\t}\n"); // Close the loop
+            document.write("?>\n");
+            document.write("</div>\n");
+         }
+         ?>
+   ]]></Output>
+   <PreviewOutput><![CDATA[
+         <div class="post_container">
+         <?wsx5
+            for (var i = 0; i < parameters.posts_number.value; i++) {
+               var date = new Date();
+               date = new Date(date.getTime() - 60 * 15632 * i);
+               var strdate = date.getDate() + "/" + date.getMonth() + "/" + date.getFullYear() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+               document.write("<div class=\"post\">"); // Open post
+               document.write("<a href=\"#\" class=\"post_title\">Lorem Ipsum</a>"); // Post title
+               document.write("<div class=\"post_body\">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut mollis rutrum suscipit.</div>"); // Post body
+               document.write("<div class=\"post_data\">" + l10n.get("published_by", "Published by") + " John Doe - " + strdate + "</div>"); // Post data
+               document.write("</div>"); // Close post
+            }
+         ?>
+         </div>
+      ]]></PreviewOutput>
+</App>
